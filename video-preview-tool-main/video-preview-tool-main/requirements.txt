@@ -1,0 +1,6 @@
+PyQt6>=6.4.0
+python-vlc>=3.0.18122
+pillow==10.2.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0

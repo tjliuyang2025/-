@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频预览工具 - Video Preview Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #42B883 0%, #3AA876 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .toolbar {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #0051FF;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+        }
+
+        .btn-secondary {
+            background: #42B883;
+        }
+
+        .btn-secondary:hover {
+            background: #3AA876;
+            box-shadow: 0 4px 12px rgba(66,184,131,0.3);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            box-shadow: 0 4px 12px rgba(220,53,69,0.3);
+        }
+
+        .btn-icon {
+            padding: 8px;
+            min-width: 40px;
+            justify-content: center;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 25px;
+            padding: 30px;
+            background: white;
+        }
+
+        .video-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .video-card.selected {
+            border: 2px solid #42B883;
+            background: #f0f9f4;
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(66,184,131,0.2);
+        }
+
+        .card-header {
+            background: #f5f5f5;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-header.selected {
+            background: #e8f5f0;
+        }
+
+        .video-name {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .video-name.editing {
+            background: white;
+            border: 1px solid #42B883;
+            border-radius: 4px;
+            padding: 4px 8px;
+            outline: none;
+        }
+
+        .card-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+            font-size: 14px;
+        }
+
+        .icon-btn:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .video-preview {
+            width: 100%;
+            height: 250px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            position: relative;
+        }
+
+        .video-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .play-overlay:hover {
+            background: rgba(0,0,0,0.9);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .card-footer {
+            padding: 15px;
+            background: white;
+        }
+
+        .video-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .play-btn {
+            background: transparent;
+            border: none;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: background 0.2s ease;
+        }
+
+        .play-btn:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .progress-container {
+            flex: 1;
+            position: relative;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #42B883;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .progress-handle {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background: #42B883;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .time-display {
+            font-size: 12px;
+            color: #666;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .volume-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-slider {
+            width: 60px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: #42B883;
+            border-radius: 2px;
+            width: 100%;
+        }
+
+        .speed-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .speed-btn {
+            background: transparent;
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .speed-btn.active {
+            background: #42B883;
+            color: white;
+            border-color: #42B883;
+        }
+
+        .speed-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .speed-btn.active:hover {
+            background: #3AA876;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .stats {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+        }
+
+        .quote {
+            font-style: italic;
+            color: #42B883;
+            text-align: center;
+            padding: 20px;
+            background: #f0f9f4;
+            border-radius: 8px;
+            margin: 20px 30px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            min-width: 400px;
+            text-align: center;
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 视频预览工具</h1>
+            <p>Video Preview Tool - 现代化视频管理和预览解决方案</p>
+        </div>
+
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <label for="file-input" class="btn">
+                    📁 上传视频
+                </label>
+                <input type="file" id="file-input" class="file-input" multiple accept="video/*">
+                
+                <button class="btn btn-secondary" onclick="selectAll()">
+                    ☑️ 全选
+                </button>
+                
+                <button class="btn btn-secondary" onclick="moveSelected()">
+                    📁 移动到
+                </button>
+                
+                <button class="btn btn-danger" onclick="deleteSelected()">
+                    🗑️ 删除选中
+                </button>
+            </div>
+            
+            <div class="toolbar-right">
+                <span id="video-count">0 个视频</span>
+            </div>
+        </div>
+
+        <div class="quote" id="quote">
+            "电影是生活的镜子，而生活是电影的灵感。" - 费德里科·费里尼
+        </div>
+
+        <div class="video-grid" id="video-grid">
+            <div class="empty-state" id="empty-state">
+                <div class="icon">🎬</div>
+                <h3>还没有视频</h3>
+                <p>点击"上传视频"按钮开始添加您的视频文件</p>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div>总视频数: <span id="total-count">0</span></div>
+            <div>已选择: <span id="selected-count">0</span></div>
+            <div>总时长: <span id="total-duration">00:00</span></div>
+        </div>
+    </div>
+
+    <!-- 移动文件模态框 -->
+    <div class="modal" id="move-modal">
+        <div class="modal-content">
+            <h3>选择目标文件夹</h3>
+            <p>请选择要将选中视频移动到的目标文件夹</p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn" onclick="confirmMove()">确认移动</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class VideoPreviewTool {
+            constructor() {
+                this.videos = [];
+                this.selectedVideos = new Set();
+                this.currentQuoteIndex = 0;
+                this.quotes = [
+                    "电影是生活的镜子，而生活是电影的灵感。",
+                    "一部好电影应该让观众忘记时间的存在。",
+                    "电影是唯一能让时间倒流的艺术形式。",
+                    "每个镜头都讲述着一个故事。",
+                    "电影是梦想的载体，是现实的延伸。"
+                ];
+                
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.updateStats();
+                this.startQuoteRotation();
+            }
+
+            bindEvents() {
+                const fileInput = document.getElementById('file-input');
+                fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+                
+                // 拖拽上传
+                const container = document.querySelector('.container');
+                container.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    container.style.border = '2px dashed #42B883';
+                });
+                
+                container.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    container.style.border = 'none';
+                });
+                
+                container.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    container.style.border = 'none';
+                    this.handleFileDrop(e);
+                });
+            }
+
+            handleFileSelect(event) {
+                const files = Array.from(event.target.files);
+                this.addVideos(files);
+            }
+
+            handleFileDrop(event) {
+                const files = Array.from(event.dataTransfer.files).filter(file => 
+                    file.type.startsWith('video/')
+                );
+                this.addVideos(files);
+            }
+
+            addVideos(files) {
+                files.forEach(file => {
+                    if (file.type.startsWith('video/')) {
+                        const video = {
+                            id: Date.now() + Math.random(),
+                            file: file,
+                            name: file.name,
+                            path: URL.createObjectURL(file),
+                            duration: 0,
+                            selected: false
+                        };
+                        
+                        this.videos.push(video);
+                        this.createVideoCard(video);
+                        this.updateStats();
+                    }
+                });
+                
+                // 隐藏空状态
+                document.getElementById('empty-state').style.display = 'none';
+                
+                // 清空文件输入
+                document.getElementById('file-input').value = '';
+            }
+
+            createVideoCard(video) {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                card.dataset.videoId = video.id;
+                
+                card.innerHTML = `
+                    <div class="card-header ${video.selected ? 'selected' : ''}">
+                        <div class="video-name" contenteditable="false">${video.name}</div>
+                        <div class="card-controls">
+                            <button class="icon-btn edit-btn" onclick="videoTool.editVideoName(${video.id})">✏️</button>
+                            <button class="icon-btn select-btn" onclick="videoTool.toggleSelect(${video.id})">
+                                ${video.selected ? '☑️' : '☐'}
+                            </button>
+                            <button class="icon-btn delete-btn" onclick="videoTool.deleteVideo(${video.id})">✕</button>
+                        </div>
+                    </div>
+                    
+                    <div class="video-preview">
+                        <video src="${video.path}" preload="metadata"></video>
+                        <div class="play-overlay" onclick="videoTool.playVideo(${video.id})">
+                            ▶️
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="video-controls">
+                            <button class="play-btn" onclick="videoTool.togglePlay(${video.id})">▶️</button>
+                            
+                            <div class="progress-container">
+                                <div class="progress-bar" onclick="videoTool.seekVideo(${video.id}, event)">
+                                    <div class="progress-fill" style="width: 0%"></div>
+                                    <div class="progress-handle" style="left: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="time-display">00:00 / 00:00</div>
+                        </div>
+                        
+                        <div class="volume-controls">
+                            <button class="icon-btn" onclick="videoTool.toggleMute(${video.id})">🔊</button>
+                            <div class="volume-slider">
+                                <div class="volume-fill"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="speed-controls">
+                            <button class="speed-btn active" data-speed="1.0" onclick="videoTool.setSpeed(${video.id}, 1.0)">1.0x</button>
+                            <button class="speed-btn" data-speed="1.5" onclick="videoTool.setSpeed(${video.id}, 1.5)">1.5x</button>
+                            <button class="speed-btn" data-speed="2.0" onclick="videoTool.setSpeed(${video.id}, 2.0)">2.0x</button>
+                        </div>
+                    </div>
+                `;
+                
+                // 绑定视频事件
+                const videoElement = card.querySelector('video');
+                videoElement.addEventListener('loadedmetadata', () => {
+                    video.duration = videoElement.duration;
+                    this.updateVideoTime(video.id);
+                });
+                
+                videoElement.addEventListener('timeupdate', () => {
+                    this.updateVideoProgress(video.id);
+                });
+                
+                videoElement.addEventListener('ended', () => {
+                    this.resetVideo(video.id);
+                });
+                
+                document.getElementById('video-grid').appendChild(card);
+            }
+
+            toggleSelect(videoId) {
+                const video = this.videos.find(v => v.id === videoId);
+                if (video) {
+                    video.selected = !video.selected;
+                    
+                    if (video.selected) {
+                        this.selectedVideos.add(videoId);
+                    } else {
+                        this.selectedVideos.delete(videoId);
+                    }
+                    
+                    this.updateVideoCard(videoId);
+                    this.updateStats();
+                }
+            }
+
+            selectAll() {
+                const allSelected = this.videos.length > 0 && this.videos.every(v => v.selected);
+                
+                this.videos.forEach(video => {
+                    video.selected = !allSelected;
+                    if (video.selected) {
+                        this.selectedVideos.add(video.id);
+                    } else {
+                        this.selectedVideos.delete(video.id);
+                    }
+                    this.updateVideoCard(video.id);
+                });
+                
+                this.updateStats();
+            }
+
+            editVideoName(videoId) {
+                const video = this.videos.find(v => v.id === videoId);
+                if (!video) return;
+                
+                const nameElement = document.querySelector(`[data-video-id="${videoId}"] .video-name`);
+                nameElement.contentEditable = true;
+                nameElement.focus();
+                nameElement.style.background = 'white';
+                nameElement.style.border = '1px solid #42B883';
+                nameElement.style.padding = '4px 8px';
+                nameElement.style.borderRadius = '4px';
+                
+                // 保存编辑
+                nameElement.addEventListener('blur', () => {
+                    video.name = nameElement.textContent;
+                    nameElement.contentEditable = false;
+                    nameElement.style.background = 'transparent';
+                    nameElement.style.border = 'none';
+                    nameElement.style.padding = '0';
+                    nameElement.style.borderRadius = '0';
+                }, { once: true });
+                
+                nameElement.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        nameElement.blur();
+                    }
+                });
+            }
+
+            playVideo(videoId) {
+                const video = this.videos.find(v => v.id === videoId);
+                if (!video) return;
+                
+                const videoElement = document.querySelector(`[data-video-id="${videoId}"] video`);
+                const overlay = document.querySelector(`[data-video-id="${videoId}"] .play-overlay`);
+                
+                if (videoElement.paused) {
+                    videoElement.play();
+                    overlay.style.display = 'none';
+                } else {
+                    videoElement.pause();
+                    overlay.style.display = 'flex';
+                }
+            }
+
+            togglePlay(videoId) {
+                this.playVideo(videoId);
+            }
+
+            seekVideo(videoId, event) {
+                const video = this.videos.find(v => v.id === videoId);
+                if (!video) return;
+                
+                const videoElement = document.querySelector(`[data-video-id="${videoId}"] video`);
+                const progressBar = event.currentTarget;
+                const rect = progressBar.getBoundingClientRect();
+                const clickX = event.clientX - rect.left;
+                const percentage = clickX / rect.width;
+                
+                videoElement.currentTime = percentage * videoElement.duration;
+            }
+
+            toggleMute(videoId) {
+                const videoElement = document.querySelector(`[data-video-id="${videoId}"] video`);
+                videoElement.muted = !videoElement.muted;
+                
+                const muteBtn = document.querySelector(`[data-video-id="${videoId}"] .volume-controls .icon-btn`);
+                muteBtn.textContent = videoElement.muted ? '🔇' : '🔊';
+            }
+
+            setSpeed(videoId, speed) {
+                const videoElement = document.querySelector(`[data-video-id="${videoId}"] video`);
+                videoElement.playbackRate = speed;
+                
+                // 更新按钮状态
+                const speedBtns = document.querySelectorAll(`[data-video-id="${videoId}"] .speed-btn`);
+                speedBtns.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (parseFloat(btn.dataset.speed) === speed) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+
+            updateVideoProgress(videoId) {
+                const video = this.videos.find(v => v.id === videoId);
+                if (!video) return;
+                
+                const videoElement = document.querySelector(`[data-video-id="${videoId}"] video`);
+                const progressFill = document.querySelector(`[data-video-id="${videoId}"] .progress-fill`);
+                const progressHandle = document.querySelector(`[data-video-id="${videoId}"] .progress-handle`);
+                
+                if (videoElement.duration) {
+                    const percentage = (videoElement.currentTime / videoElement.duration) * 100;
+                    progressFill.style.width = percentage + '%';
+                    progressHandle.style.left = percentage + '%';
+                }
+                
+                this.updateVideoTime(videoId);
+            }
+
+            updateVideoTime(videoId) {
+                const video = this.videos.find(v => v.id === videoId);
+                if (!video) return;
+                
+                const videoElement = document.querySelector(`[data-video-id="${videoId}"] video`);
+                const timeDisplay = document.querySelector(`[data-video-id="${videoId}"] .time-display`);
+                
+                if (videoElement.duration) {
+                    const currentTime = this.formatTime(videoElement.currentTime);
+                    const totalTime = this.formatTime(videoElement.duration);
+                    timeDisplay.textContent = `${currentTime} / ${totalTime}`;
+                }
+            }
+
+            resetVideo(videoId) {
+                const videoElement = document.querySelector(`[data-video-id="${videoId}"] video`);
+                const overlay = document.querySelector(`[data-video-id="${videoId}"] .play-overlay`);
+                
+                videoElement.currentTime = 0;
+                overlay.style.display = 'flex';
+            }
+
+            updateVideoCard(videoId) {
+                const card = document.querySelector(`[data-video-id="${videoId}"]`);
+                const video = this.videos.find(v => v.id === videoId);
+                
+                if (card && video) {
+                    if (video.selected) {
+                        card.classList.add('selected');
+                        card.querySelector('.card-header').classList.add('selected');
+                    } else {
+                        card.classList.remove('selected');
+                        card.querySelector('.card-header').classList.remove('selected');
+                    }
+                    
+                    const selectBtn = card.querySelector('.select-btn');
+                    selectBtn.textContent = video.selected ? '☑️' : '☐';
+                }
+            }
+
+            deleteVideo(videoId) {
+                if (confirm('确定要删除这个视频吗？')) {
+                    const index = this.videos.findIndex(v => v.id === videoId);
+                    if (index > -1) {
+                        this.videos.splice(index, 1);
+                        this.selectedVideos.delete(videoId);
+                        
+                        const card = document.querySelector(`[data-video-id="${videoId}"]`);
+                        if (card) {
+                            card.remove();
+                        }
+                        
+                        this.updateStats();
+                        
+                        // 如果没有视频了，显示空状态
+                        if (this.videos.length === 0) {
+                            document.getElementById('empty-state').style.display = 'block';
+                        }
+                    }
+                }
+            }
+
+            deleteSelected() {
+                if (this.selectedVideos.size === 0) {
+                    alert('请先选择要删除的视频');
+                    return;
+                }
+                
+                if (confirm(`确定要删除选中的 ${this.selectedVideos.size} 个视频吗？`)) {
+                    this.selectedVideos.forEach(videoId => {
+                        this.deleteVideo(videoId);
+                    });
+                }
+            }
+
+            moveSelected() {
+                if (this.selectedVideos.size === 0) {
+                    alert('请先选择要移动的视频');
+                    return;
+                }
+                
+                document.getElementById('move-modal').style.display = 'block';
+            }
+
+            closeModal() {
+                document.getElementById('move-modal').style.display = 'none';
+            }
+
+            confirmMove() {
+                // 模拟文件移动操作
+                alert(`已将选中的 ${this.selectedVideos.size} 个视频移动到目标文件夹`);
+                this.closeModal();
+                
+                // 清空选择
+                this.selectedVideos.clear();
+                this.videos.forEach(video => {
+                    video.selected = false;
+                    this.updateVideoCard(video.id);
+                });
+                this.updateStats();
+            }
+
+            updateStats() {
+                document.getElementById('video-count').textContent = `${this.videos.length} 个视频`;
+                document.getElementById('total-count').textContent = this.videos.length;
+                document.getElementById('selected-count').textContent = this.selectedVideos.size;
+                
+                const totalDuration = this.videos.reduce((total, video) => total + video.duration, 0);
+                document.getElementById('total-duration').textContent = this.formatTime(totalDuration);
+            }
+
+            formatTime(seconds) {
+                if (!seconds || isNaN(seconds)) return '00:00';
+                
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+                
+                if (hours > 0) {
+                    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                } else {
+                    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                }
+            }
+
+            startQuoteRotation() {
+                setInterval(() => {
+                    this.currentQuoteIndex = (this.currentQuoteIndex + 1) % this.quotes.length;
+                    document.getElementById('quote').textContent = this.quotes[this.currentQuoteIndex];
+                }, 8000);
+            }
+        }
+
+        // 初始化应用
+        const videoTool = new VideoPreviewTool();
+
+        // 全局函数
+        function selectAll() {
+            videoTool.selectAll();
+        }
+
+        function moveSelected() {
+            videoTool.moveSelected();
+        }
+
+        function deleteSelected() {
+            videoTool.deleteSelected();
+        }
+
+        function closeModal() {
+            videoTool.closeModal();
+        }
+
+        function confirmMove() {
+            videoTool.confirmMove();
+        }
+    </script>
+</body>
+</html>
